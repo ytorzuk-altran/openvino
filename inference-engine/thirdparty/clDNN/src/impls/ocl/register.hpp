@@ -51,6 +51,7 @@
 #include "cldnn/primitives/scatter_nd_update.hpp"
 #include "cldnn/primitives/select.hpp"
 #include "cldnn/primitives/shuffle_channels.hpp"
+#include "cldnn/primitives/slice.hpp"
 #include "cldnn/primitives/softmax.hpp"
 #include "cldnn/primitives/space_to_batch.hpp"
 #include "cldnn/primitives/strided_slice.hpp"
@@ -125,6 +126,7 @@ REGISTER_OCL(scatter_elements_update);
 REGISTER_OCL(scatter_nd_update);
 REGISTER_OCL(select);
 REGISTER_OCL(shuffle_channels);
+REGISTER_OCL(slice);
 REGISTER_OCL(softmax);
 REGISTER_OCL(space_to_batch);
 REGISTER_OCL(space_to_depth);
