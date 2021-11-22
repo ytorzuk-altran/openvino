@@ -67,6 +67,7 @@
 #include <transformations/op_conversions/convert_deformable_conv_v8_to_v1.hpp>
 #include <transformations/op_conversions/simplify_ctc_greedy_decoder_seq_len.hpp>
 #include "transformations/op_conversions/softmax_decomposition.hpp"
+#include "transformations/op_conversions/convert_slice_to_strided_slice.hpp"
 #include <transformations/convert_precision.hpp>
 #include <transformations/init_node_info.hpp>
 #include <transformations/rt_info/fused_names_attribute.hpp>
@@ -308,6 +309,7 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Function> func) {
         pass_config->disable<ngraph::pass::WeightsDequantizeToFakeQuantize>();
         pass_config->disable<ngraph::pass::SimplifyCTCGreedyDecoderSeqLen>();
         pass_config->enable<ngraph::pass::ConvertGather8ToGather7>();
+        pass_config->disable<ngraph::pass::SliceToStridedSlice>();
 
         if (!config.enable_loop_unrolling) {
             pass_config->disable<ngraph::pass::ConvertTensorIteratorToRNNSequence>();
