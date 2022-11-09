@@ -97,6 +97,11 @@ private:
     Xbyak::Reg64 reg_params;
 };
 
+template<typename T>
+T align_value(T i, T alignment = 16) {
+    return i % alignment == 0 ? i : i + alignment - (i % alignment);
+}
+
 } // namespace node
 } // namespace intel_cpu
 } // namespace ov

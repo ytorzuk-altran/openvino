@@ -88,9 +88,23 @@ void jit_uni_nms_proposal_kernel_impl<isa>::generate() {
         Label tail_loop_end_label;
         L(tail_loop_label);
         {
+            Label skip_align;
             cmp(reg_tail, reg_simd_tail_len);
             jg(tail_loop_end_label, T_NEAR);
 
+            // first iteration = reg_box_idx - reg_tail
+            mov(rax, reg_tail);
+            sub(rax, reg_box_idx);
+            cmp(rax, 1);
+            je(skip_align);
+            lea(rax, ptr[reg_x0_ptr + sizeof(float) * reg_tail]);
+            // modulo
+            and_(eax, 63);
+            // Shift reg_tail to work with aligned addresses
+            shr(rax, 2);
+            sub(reg_tail, rax);
+
+            L(skip_align);
             Vmm vx0j {5};
             Vmm vy0j {6};
             Vmm vx1j {7};
@@ -136,9 +150,12 @@ void jit_uni_nms_proposal_kernel_impl<isa>::generate() {
 
                 uni_vmulps(varea, vwidth, vheight);
             }
-            Vmm vB_area {10};
+            Vmm reg_is_dead_val {10};
+            uni_vmovdqu(reg_is_dead_val, ptr[reg_is_dead_ptr + sizeof(int) * reg_tail]);
+
+            Vmm vB_area {11};
             {
-                Vmm vB_width {11};
+                Vmm vB_width {12};
                 uni_vsubps(vB_width, vx1j, vx0j);
                 uni_vsubps(vB_area, vy1j, vy0j);
                 uni_vaddps(vB_width, vB_width, reg_coordinates_offset);
@@ -165,7 +182,8 @@ void jit_uni_nms_proposal_kernel_impl<isa>::generate() {
                 kandw(k4, k4, k2);
                 kandw(k4, k4, k5);
 
-                uni_vmovdqu(ptr[reg_is_dead_ptr + sizeof(int) * reg_tail]|k4, reg_ione);
+                vmovdqu32(reg_is_dead_val|k4, reg_ione);
+                uni_vmovdqu(ptr[reg_is_dead_ptr + sizeof(int) * reg_tail], reg_is_dead_val);
             } else {
                 Vmm not_nan { vB_area };
                 uni_vcmpps(not_nan, reg_nms_thresh, varea, VCMPPS_ORD);
@@ -181,8 +199,6 @@ void jit_uni_nms_proposal_kernel_impl<isa>::generate() {
                 uni_vandps(varea, varea, vx0j);
                 uni_vandps(varea, varea, not_nan);
 
-                Vmm reg_is_dead_val {vB_area};
-                uni_vmovdqu(reg_is_dead_val, ptr[reg_is_dead_ptr + sizeof(int) * reg_tail]);
                 uni_vblendvps(reg_is_dead_val, reg_is_dead_val, reg_ione, varea);
                 uni_vmovdqu(ptr[reg_is_dead_ptr + sizeof(int) * reg_tail], reg_is_dead_val);
             }
