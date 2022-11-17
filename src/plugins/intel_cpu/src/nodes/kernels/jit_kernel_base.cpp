@@ -521,3 +521,41 @@ void JitKernelBase::memMovDD(const Xbyak::Reg64& rDst,
     }
     L(lEnd);
 }
+
+void JitKernelBase::uni_vcvtsi2ss(const Xbyak::Xmm &x1,
+                                  const Xbyak::Xmm &x2,
+                                  const Xbyak::Operand &op) {
+    if (isValidIsa(x64::avx)) {
+        vcvtsi2ss(x1, x2, op);
+    } else {
+        assert(x1.getIdx() == x2.getIdx());
+        cvtsi2ss(x1, op);
+    }
+}
+
+void JitKernelBase::uni_vsubss(const Xbyak::Xmm &x,
+                               const Xbyak::Operand &op1,
+                               const Xbyak::Operand &op2) {
+    if (isValidIsa(x64::avx)) {
+        // previously there was "subps(x, op2)" for some reason
+        vsubss(x, op1, op2);
+    } else {
+        assert(x.isEqualIfNotInherited(op1));
+        if (!x.isEqualIfNotInherited(op1))
+            movss(x, op1);
+        subss(x, op2);
+    }
+}
+
+void JitKernelBase::uni_vmulss(const Xbyak::Xmm &x,
+                               const Xbyak::Operand &op1,
+                               const Xbyak::Operand &op2) {
+    if (isValidIsa(x64::avx)) {
+        vmulss(x, op1, op2);
+    } else {
+        assert(x.isEqualIfNotInherited(op1));
+        if (!x.isEqualIfNotInherited(op1))
+            movss(x, op1);
+        mulss(x, op2);
+    }
+}

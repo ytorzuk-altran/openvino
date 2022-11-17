@@ -34,6 +34,10 @@ public:
         jit_generator::uni_vpsubd(vDst, vSrc, op);
     }
 
+    void uni_vsubss(const Xbyak::Xmm &x, const Xbyak::Operand &op1, const Xbyak::Operand &op2);
+
+    void uni_vmulss(const Xbyak::Xmm &x, const Xbyak::Operand &op1, const Xbyak::Operand &op2);
+
     void uni_vpsubd(const Xbyak::Ymm& vDst, const Xbyak::Ymm& vSrc, const Xbyak::Operand& op);
 
     void uni_vdivps(const Xbyak::Xmm& vDst, const Xbyak::Operand& op1, const Xbyak::Operand& op2);
@@ -57,6 +61,8 @@ public:
     void uni_kandd(const Xbyak::Xmm& kDst, const Xbyak::Xmm& kSrc1, const Xbyak::Xmm& kSrc2) {
         uni_vandps(kDst, kSrc1, kSrc2);
     }
+
+    void uni_vcvtsi2ss(const Xbyak::Xmm& x1, const Xbyak::Xmm& x2, const Xbyak::Operand& op);
 
     void uni_vpbroadcastd(const Xbyak::Xmm &x, const Xbyak::Operand &op);
 
