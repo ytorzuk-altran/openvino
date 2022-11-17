@@ -77,7 +77,7 @@ std::vector<float> generate_anchors(proposal_conf &conf) {
     return anchors;
 }
 
-void enumerate_proposals_cpu(const float* bottom4d, const float* d_anchor4d, const float* anchors,
+void enumerate_proposals(const float* bottom4d, const float* d_anchor4d, const float* anchors,
                              float* proposals, const int num_anchors, const int bottom_H,
                              const int bottom_W, const float img_H, const float img_W,
                              const float min_box_H, const float min_box_W, const int feat_stride,
@@ -90,75 +90,77 @@ void enumerate_proposals_cpu(const float* bottom4d, const float* d_anchor4d, con
     const float* p_anchors_wp = anchors + 2 * num_anchors;
     const float* p_anchors_hp = anchors + 3 * num_anchors;
 
-    parallel_for2d(bottom_H, bottom_W, [&](size_t h, size_t w) {
-        const float x = static_cast<float>((swap_xy ? h : w) * feat_stride);
-        const float y = static_cast<float>((swap_xy ? w : h) * feat_stride);
+    parallel_for(num_anchors, [=](int anchor) {
+        for (size_t h = 0; h < bottom_H; h++) {
+            for (size_t w = 0; w < bottom_W; w++) {
+                const float x = static_cast<float>((swap_xy ? h : w) * feat_stride);
+                const float y = static_cast<float>((swap_xy ? w : h) * feat_stride);
 
-        const float* p_box   = d_anchor4d + h * bottom_W + w;
-        const float* p_score = bottom4d   + h * bottom_W + w;
+                const float *p_box = d_anchor4d + h * bottom_W + w;
+                const float *p_score = bottom4d + h * bottom_W + w;
 
-        float* p_proposal = proposals + (h * bottom_W + w) * num_anchors * 5;
+                float *p_proposal = proposals + (h * bottom_W + w) * num_anchors * 5;
 
-        for (int anchor = 0; anchor < num_anchors; ++anchor) {
-            const float dx = p_box[(anchor * 4 + 0) * bottom_area] / box_coordinate_scale;
-            const float dy = p_box[(anchor * 4 + 1) * bottom_area] / box_coordinate_scale;
+                const float dx = p_box[(anchor * 4 + 0) * bottom_area] / box_coordinate_scale;
+                const float dy = p_box[(anchor * 4 + 1) * bottom_area] / box_coordinate_scale;
 
-            const float d_log_w = p_box[(anchor * 4 + 2) * bottom_area] / box_size_scale;
-            const float d_log_h = p_box[(anchor * 4 + 3) * bottom_area] / box_size_scale;
+                const float d_log_w = p_box[(anchor * 4 + 2) * bottom_area] / box_size_scale;
+                const float d_log_h = p_box[(anchor * 4 + 3) * bottom_area] / box_size_scale;
 
-            const float score = p_score[anchor * bottom_area];
+                const float score = p_score[anchor * bottom_area];
 
-            float x0 = x + p_anchors_wm[anchor];
-            float y0 = y + p_anchors_hm[anchor];
-            float x1 = x + p_anchors_wp[anchor];
-            float y1 = y + p_anchors_hp[anchor];
+                float x0 = x + p_anchors_wm[anchor];
+                float y0 = y + p_anchors_hm[anchor];
+                float x1 = x + p_anchors_wp[anchor];
+                float y1 = y + p_anchors_hp[anchor];
 
-            if (initial_clip) {
-                // adjust new corner locations to be within the image region
-                x0 = std::max<float>(0.0f, std::min<float>(x0, img_W));
-                y0 = std::max<float>(0.0f, std::min<float>(y0, img_H));
-                x1 = std::max<float>(0.0f, std::min<float>(x1, img_W));
-                y1 = std::max<float>(0.0f, std::min<float>(y1, img_H));
+                if (initial_clip) {
+                    // adjust new corner locations to be within the image region
+                    x0 = std::max<float>(0.0f, std::min<float>(x0, img_W));
+                    y0 = std::max<float>(0.0f, std::min<float>(y0, img_H));
+                    x1 = std::max<float>(0.0f, std::min<float>(x1, img_W));
+                    y1 = std::max<float>(0.0f, std::min<float>(y1, img_H));
+                }
+
+                // width & height of box
+                const float ww = x1 - x0 + coordinates_offset;
+                const float hh = y1 - y0 + coordinates_offset;
+                // center location of box
+                const float ctr_x = x0 + 0.5f * ww;
+                const float ctr_y = y0 + 0.5f * hh;
+
+                // new center location according to gradient (dx, dy)
+                const float pred_ctr_x = dx * ww + ctr_x;
+                const float pred_ctr_y = dy * hh + ctr_y;
+                // new width & height according to gradient d(log w), d(log h)
+                const float pred_w = std::exp(d_log_w) * ww;
+                const float pred_h = std::exp(d_log_h) * hh;
+
+                // update upper-left corner location
+                x0 = pred_ctr_x - 0.5f * pred_w;
+                y0 = pred_ctr_y - 0.5f * pred_h;
+                // update lower-right corner location
+                x1 = pred_ctr_x + 0.5f * pred_w;
+                y1 = pred_ctr_y + 0.5f * pred_h;
+
+                // adjust new corner locations to be within the image region,
+                if (clip_before_nms) {
+                    x0 = std::max<float>(0.0f, std::min<float>(x0, img_W - coordinates_offset));
+                    y0 = std::max<float>(0.0f, std::min<float>(y0, img_H - coordinates_offset));
+                    x1 = std::max<float>(0.0f, std::min<float>(x1, img_W - coordinates_offset));
+                    y1 = std::max<float>(0.0f, std::min<float>(y1, img_H - coordinates_offset));
+                }
+
+                // recompute new width & height
+                const float box_w = x1 - x0 + coordinates_offset;
+                const float box_h = y1 - y0 + coordinates_offset;
+
+                p_proposal[5*anchor + 0] = x0;
+                p_proposal[5*anchor + 1] = y0;
+                p_proposal[5*anchor + 2] = x1;
+                p_proposal[5*anchor + 3] = y1;
+                p_proposal[5*anchor + 4] = (min_box_W <= box_w) * (min_box_H <= box_h) * score;
             }
-
-            // width & height of box
-            const float ww = x1 - x0 + coordinates_offset;
-            const float hh = y1 - y0 + coordinates_offset;
-            // center location of box
-            const float ctr_x = x0 + 0.5f * ww;
-            const float ctr_y = y0 + 0.5f * hh;
-
-            // new center location according to gradient (dx, dy)
-            const float pred_ctr_x = dx * ww + ctr_x;
-            const float pred_ctr_y = dy * hh + ctr_y;
-            // new width & height according to gradient d(log w), d(log h)
-            const float pred_w = std::exp(d_log_w) * ww;
-            const float pred_h = std::exp(d_log_h) * hh;
-
-            // update upper-left corner location
-            x0 = pred_ctr_x - 0.5f * pred_w;
-            y0 = pred_ctr_y - 0.5f * pred_h;
-            // update lower-right corner location
-            x1 = pred_ctr_x + 0.5f * pred_w;
-            y1 = pred_ctr_y + 0.5f * pred_h;
-
-            // adjust new corner locations to be within the image region,
-            if (clip_before_nms) {
-                x0 = std::max<float>(0.0f, std::min<float>(x0, img_W - coordinates_offset));
-                y0 = std::max<float>(0.0f, std::min<float>(y0, img_H - coordinates_offset));
-                x1 = std::max<float>(0.0f, std::min<float>(x1, img_W - coordinates_offset));
-                y1 = std::max<float>(0.0f, std::min<float>(y1, img_H - coordinates_offset));
-            }
-
-            // recompute new width & height
-            const float box_w = x1 - x0 + coordinates_offset;
-            const float box_h = y1 - y0 + coordinates_offset;
-
-            p_proposal[5*anchor + 0] = x0;
-            p_proposal[5*anchor + 1] = y0;
-            p_proposal[5*anchor + 2] = x1;
-            p_proposal[5*anchor + 3] = y1;
-            p_proposal[5*anchor + 4] = (min_box_W <= box_w) * (min_box_H <= box_h) * score;
         }
     });
 }
@@ -464,7 +466,7 @@ void Proposal::executeImpl(const float *input0, const float *input1, std::vector
     // Execute
     int nn = dims0[0];
     for (int n = 0; n < nn; ++n) {
-        enumerate_proposals_cpu(p_bottom_item + num_proposals + n * num_proposals * 2,
+        enumerate_proposals(p_bottom_item + num_proposals + n * num_proposals * 2,
                                 p_d_anchor_item + n * num_proposals * 4,
                                 anchors, reinterpret_cast<float *>(&proposals_[0]),
                                 conf.anchors_shape_0, bottom_H, bottom_W, img_H, img_W,
