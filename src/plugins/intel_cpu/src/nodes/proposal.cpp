@@ -90,7 +90,8 @@ void enumerate_proposals(const float* bottom4d, const float* d_anchor4d, const f
     const float* p_anchors_wp = anchors + 2 * num_anchors;
     const float* p_anchors_hp = anchors + 3 * num_anchors;
 
-    parallel_for(num_anchors, [=](int anchor) {
+//    parallel_for(num_anchors, [=](int anchor) {
+    for (int anchor = 0; anchor < num_anchors; anchor++) {
         for (size_t h = 0; h < bottom_H; h++) {
             for (size_t w = 0; w < bottom_W; w++) {
                 const float x = static_cast<float>((swap_xy ? h : w) * feat_stride);
@@ -162,7 +163,7 @@ void enumerate_proposals(const float* bottom4d, const float* d_anchor4d, const f
                 p_proposal[5*anchor + 4] = (min_box_W <= box_w) * (min_box_H <= box_h) * score;
             }
         }
-    });
+    } //);
 }
 
 void unpack_boxes(const float* p_proposals, float* unpacked_boxes, int pre_nms_topn, bool store_prob) {
