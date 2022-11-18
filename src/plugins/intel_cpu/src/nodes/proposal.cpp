@@ -82,7 +82,8 @@ void enumerate_proposals(const float* bottom4d, const float* d_anchor4d, const f
                              const int bottom_W, const float img_H, const float img_W,
                              const float min_box_H, const float min_box_W, const int feat_stride,
                              const float box_coordinate_scale, const float box_size_scale,
-                             float coordinates_offset, bool initial_clip, bool swap_xy, bool clip_before_nms) {
+                             float coordinates_offset, bool initial_clip, bool swap_xy,
+                             bool clip_before_nms, size_t width_offset = 0) {
     const int bottom_area = bottom_H * bottom_W;
 
     const float* p_anchors_wm = anchors + 0 * num_anchors;
@@ -93,7 +94,7 @@ void enumerate_proposals(const float* bottom4d, const float* d_anchor4d, const f
 //    parallel_for(num_anchors, [=](int anchor) {
     for (int anchor = 0; anchor < num_anchors; anchor++) {
         for (size_t h = 0; h < bottom_H; h++) {
-            for (size_t w = 0; w < bottom_W; w++) {
+            for (size_t w = width_offset; w < bottom_W; w++) {
                 const float x = static_cast<float>((swap_xy ? h : w) * feat_stride);
                 const float y = static_cast<float>((swap_xy ? w : h) * feat_stride);
 
@@ -320,6 +321,30 @@ void Proposal::createPrimitive() {
         nms_kernel->create_ker();
         nms_kernel_ = std::move(nms_kernel);
     }
+    jit_uni_enumerate_proposals_kernel::jit_conf ep_jcp {
+        conf.anchors_shape_0,
+        static_cast<float>(conf.feat_stride_),
+        conf.box_coordinate_scale_,
+        conf.box_size_scale_,
+        conf.coordinates_offset,
+        conf.initial_clip,
+        conf.swap_xy,
+        conf.clip_before_nms
+    };
+    std::unique_ptr<jit_uni_enumerate_proposals_kernel> enum_proposals_kernel;
+//    if (mayiuse(avx512_core)) {
+//        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<avx512_core> { ep_jcp });
+//    } else if (mayiuse(x64::avx2)) {
+//        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<x64::avx2> { ep_jcp });
+//    } else if (mayiuse(sse41)) {
+        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<sse41> { ep_jcp });
+//    } else {
+//        IE_THROW() << "Unsupported ISA";
+//    }
+    if (enum_proposals_kernel) {
+        enum_proposals_kernel->create_ker();
+        enumerate_proposals_kernel_ = std::move(enum_proposals_kernel);
+    }
 }
 
 bool Proposal::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
@@ -467,13 +492,45 @@ void Proposal::executeImpl(const float *input0, const float *input1, std::vector
     // Execute
     int nn = dims0[0];
     for (int n = 0; n < nn; ++n) {
-        enumerate_proposals(p_bottom_item + num_proposals + n * num_proposals * 2,
+        if (enumerate_proposals_kernel_) {
+            //parallel_for(conf.anchors_shape_0, [&](int anchor) {
+            for (int anchor = 0; anchor < conf.anchors_shape_0; anchor++) {
+                jit_uni_enumerate_proposals_kernel::jit_call_args args {
+                    p_bottom_item + num_proposals + n * num_proposals * 2,
+                    p_d_anchor_item + n * num_proposals * 4,
+                    anchors + 0 * conf.anchors_shape_0,
+                    anchors + 1 * conf.anchors_shape_0,
+                    anchors + 2 * conf.anchors_shape_0,
+                    anchors + 3 * conf.anchors_shape_0,
+                    reinterpret_cast<float *>(proposals_.data()),
+                    anchor,
+                    bottom_H,
+                    bottom_W,
+                    bottom_H * bottom_W,
+                    img_H,
+                    img_W,
+                    min_box_H,
+                    min_box_W
+                };
+                enumerate_proposals_kernel_->operator ()(&args);
+            }//);
+            enumerate_proposals(p_bottom_item + num_proposals + n * num_proposals * 2,
                                 p_d_anchor_item + n * num_proposals * 4,
                                 anchors, reinterpret_cast<float *>(&proposals_[0]),
                                 conf.anchors_shape_0, bottom_H, bottom_W, img_H, img_W,
                                 min_box_H, min_box_W, conf.feat_stride_,
                                 conf.box_coordinate_scale_, conf.box_size_scale_,
-                                conf.coordinates_offset, conf.initial_clip, conf.swap_xy, conf.clip_before_nms);
+                                conf.coordinates_offset, conf.initial_clip, conf.swap_xy,
+                                conf.clip_before_nms, bottom_W - enumerate_proposals_kernel_->simd_size());
+        } else {
+            enumerate_proposals(p_bottom_item + num_proposals + n * num_proposals * 2,
+                p_d_anchor_item + n * num_proposals * 4,
+                anchors, reinterpret_cast<float *>(&proposals_[0]),
+                conf.anchors_shape_0, bottom_H, bottom_W, img_H, img_W,
+                min_box_H, min_box_W, conf.feat_stride_,
+                conf.box_coordinate_scale_, conf.box_size_scale_,
+                conf.coordinates_offset, conf.initial_clip, conf.swap_xy, conf.clip_before_nms);
+        }
         std::partial_sort(proposals_.begin(), proposals_.begin() + pre_nms_topn, proposals_.end(),
                           [](const ProposalBox &struct1, const ProposalBox &struct2) {
                               return (struct1.score > struct2.score);

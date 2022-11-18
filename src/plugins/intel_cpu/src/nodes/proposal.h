@@ -1,12 +1,12 @@
 // Copyright (C) 2018-2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
- \
 #pragma once
 
 #include <ie_common.h>
 #include <node.h>
 #include "kernels/jit_uni_nms_proposal_kernel.hpp"
+#include "kernels/proposal/enumerate_proposals_kernel.hpp"
 #include <memory>
 
 namespace ov {
@@ -69,6 +69,7 @@ private:
     std::vector<int> roi_indices;
     bool store_prob;  // store blob with proposal probabilities
     std::unique_ptr<jit_uni_nms_proposal_kernel> nms_kernel_ {};
+    std::unique_ptr<jit_uni_enumerate_proposals_kernel> enumerate_proposals_kernel_ {};
 };
 
 void nms_cpu(const int num_boxes, int is_dead[], const float *boxes, int index_out[], std::size_t *const num_out,
