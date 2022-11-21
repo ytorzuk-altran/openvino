@@ -19,6 +19,11 @@ jit_uni_enumerate_proposals_kernel_f32<isa>::jit_uni_enumerate_proposals_kernel_
 template <cpu_isa_t isa>
 void jit_uni_enumerate_proposals_kernel_f32<isa>::generate() {
     preamble();
+    registersPool = RegistersPool::create(isa, {rax, rdx, rbx, rsp, reg_params, k0});
+    RegistersPool::Reg<Reg64> reg_h{ registersPool };
+    RegistersPool::Reg<Reg64> reg_w{ registersPool };
+    RegistersPool::Reg<Reg64> reg_bottom_h{ registersPool };
+    RegistersPool::Reg<Reg64> reg_bottom_w{ registersPool };
     Label h_loop_label;
     Label h_loop_end_label;
     Label w_loop_label;
@@ -30,8 +35,8 @@ void jit_uni_enumerate_proposals_kernel_f32<isa>::generate() {
     Label coordinates_offset_const;
     Label half_value_const;
 
-    mov(reg_bottom_h.cvt32(), dword[reg_params + offsetof(jit_call_args, bottom_H)]);
-    mov(reg_bottom_w.cvt32(), dword[reg_params + offsetof(jit_call_args, bottom_W)]);
+    mov(static_cast<Reg64>(reg_bottom_h).cvt32(), dword[reg_params + offsetof(jit_call_args, bottom_H)]);
+    mov(static_cast<Reg64>(reg_bottom_w).cvt32(), dword[reg_params + offsetof(jit_call_args, bottom_W)]);
     xor_(reg_h, reg_h);
     Vmm reg_feat_stride { 1 };
 //    uni_vbroadcastss(reg_feat_stride, ptr[rip + feat_stride_const]);
@@ -46,7 +51,7 @@ void jit_uni_enumerate_proposals_kernel_f32<isa>::generate() {
         Vmm reg_h_fp32 { 3 };
         Vmm reg_w_fp32 { 4 };
 
-        uni_vcvtsi2ss(Xmm(reg_h_fp32.getIdx()), Xmm(reg_h_fp32.getIdx()), reg_h.cvt32());
+        uni_vcvtsi2ss(Xmm(reg_h_fp32.getIdx()), Xmm(reg_h_fp32.getIdx()), static_cast<Reg64>(reg_h).cvt32());
         uni_vbroadcastss(reg_h_fp32, Xmm(reg_h_fp32.getIdx()));
         uni_vmulps(reg_h_fp32, reg_h_fp32, reg_feat_stride);
 
@@ -59,16 +64,15 @@ void jit_uni_enumerate_proposals_kernel_f32<isa>::generate() {
             cmp(reg_w, rax);
             jge(w_loop_end_label, T_NEAR);
 
-            uni_vcvtsi2ss(Xmm(reg_w_fp32.getIdx()), Xmm(reg_w_fp32.getIdx()), reg_w.cvt32());
+            uni_vcvtsi2ss(Xmm(reg_w_fp32.getIdx()), Xmm(reg_w_fp32.getIdx()), static_cast<Reg64>(reg_w).cvt32());
             uni_vbroadcastss(reg_w_fp32, Xmm(reg_w_fp32.getIdx()));
             uni_vaddps(reg_w_fp32, reg_w_fp32, reg_simd_indices_offset);
             uni_vmulps(reg_w_fp32, reg_w_fp32, reg_feat_stride);
 
-            // TODO: Optimize loading registers
             {
-                Reg64 reg_anchor = r12;
-                Reg64 reg_bottom_area = r13;
-                Reg64 reg_p_box = r14;
+                RegistersPool::Reg<Reg64> reg_anchor{registersPool};
+                RegistersPool::Reg<Reg64> reg_bottom_area{registersPool};
+                RegistersPool::Reg<Reg64> reg_p_box{registersPool};
 
                 xor_(reg_anchor, reg_anchor);
                 mov(Reg32{reg_anchor.getIdx()}, dword[reg_params + offsetof(jit_call_args, anchor)]);
@@ -305,11 +309,11 @@ void jit_uni_enumerate_proposals_kernel_f32<isa>::generate() {
 //                p_proposal[5 * anchor + 3] = y1;
 //                p_proposal[5 * anchor + 4] = (min_box_W <= box_w) * (min_box_H <= box_h) * score;
 
-                Reg64 reg_h_offset { reg_bottom_area.getIdx() };
+                RegistersPool::Reg<Reg64> reg_h_offset { std::move(reg_bottom_area) };
                 mov(eax, dword[reg_params + offsetof(jit_call_args, bottom_W)]);
                 mul(reg_h);
                 mov(reg_h_offset, rax);
-                Reg64 reg_anchor_offset { reg_p_box.getIdx() };
+                RegistersPool::Reg<Reg64> reg_anchor_offset { std::move(reg_p_box) };
                 mov(reg_anchor_offset, jcp_.num_anchors * 5 * sizeof(float));
 
                 for (unsigned i = 0; i < simd_width; i++) {
@@ -342,6 +346,7 @@ void jit_uni_enumerate_proposals_kernel_f32<isa>::generate() {
         jmp(h_loop_label, T_NEAR);
     }
     L(h_loop_end_label);
+    registersPool.reset();
     postamble();
 
     // Constants

@@ -91,11 +91,6 @@ struct jit_uni_enumerate_proposals_kernel_f32 : public jit_uni_enumerate_proposa
 
 private:
     static constexpr unsigned simd_width = details::x64::cpu_isa_traits<isa>::vlen / sizeof(float);
-
-    Xbyak::Reg64 reg_h = r8;
-    Xbyak::Reg64 reg_w = r9;
-    Xbyak::Reg64 reg_bottom_h = r10;
-    Xbyak::Reg64 reg_bottom_w = r11;
     std::shared_ptr<details::x64::jit_uni_eltwise_injector_f32<isa>> exp_injector_ =
         std::make_shared<details::x64::jit_uni_eltwise_injector_f32<isa>>(this, dnnl::impl::alg_kind::eltwise_exp, 0.f, 0.f, 1.f);
     Xbyak::Reg64 reg_params;
