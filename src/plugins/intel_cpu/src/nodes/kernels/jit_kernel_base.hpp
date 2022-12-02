@@ -89,6 +89,25 @@ public:
                   const bool useMask  = true,
                   const bool zeroFill = false);
 
+    /*void scatterdd(const Xbyak::Reg64&  rDstPtr,
+                   const Xbyak::Xmm&    vSrc,
+                   const Xbyak::Xmm&    vSrcShift,
+                   const Xbyak::Opmask& kWriteMask,
+                   const bool useMask   = true,
+                   const bool zeroFill  = false);
+
+    void scatterdd(const Xbyak::Reg64& rDstPtr,
+                   const Xbyak::Xmm&   vSrc,
+                   const Xbyak::Xmm&   vSrcShift,
+                   const Xbyak::Xmm&   vWriteMask,
+                   const bool useMask  = true,
+                   const bool zeroFill = false);*/
+
+    void scatterdd(const Xbyak::Reg64& rDstPtr,
+                   const Xbyak::Ymm&   vSrc,
+                   const Xbyak::Ymm&   vSrcShift,
+                   const Xbyak::Opmask& kWriteMask);
+
     void fillRestWorkMask(const Xbyak::Opmask& kDstMask,
                           const Xbyak::Zmm& zAux,
                           const Xbyak::Reg64& rWorkRest);

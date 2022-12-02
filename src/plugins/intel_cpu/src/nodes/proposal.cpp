@@ -335,9 +335,9 @@ void Proposal::createPrimitive() {
 //    if (mayiuse(avx512_core)) {
 //        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<avx512_core> { ep_jcp });
 //    } else if (mayiuse(x64::avx2)) {
-//        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<x64::avx2> { ep_jcp });
+        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<x64::avx2> { ep_jcp });
 //    } else if (mayiuse(sse41)) {
-        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<sse41> { ep_jcp });
+//        enum_proposals_kernel.reset(new jit_uni_enumerate_proposals_kernel_f32<sse41> { ep_jcp });
 //    } else {
 //        IE_THROW() << "Unsupported ISA";
 //    }

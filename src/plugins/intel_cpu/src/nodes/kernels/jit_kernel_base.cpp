@@ -559,3 +559,38 @@ void JitKernelBase::uni_vmulss(const Xbyak::Xmm &x,
         mulss(x, op2);
     }
 }
+
+/*void JitKernelBase::scatterdd(const Xbyak::Reg64 &rDstPtr, const Xbyak::Xmm &vSrc,
+                              const Xbyak::Xmm &vSrcShift, const Xbyak::Opmask &kWriteMask,
+                              const bool useMask, const bool zeroFill) {
+}
+
+void JitKernelBase::scatterdd(const Xbyak::Reg64 &rDstPtr, const Xbyak::Xmm &vSrc,
+                              const Xbyak::Xmm &vSrcShift, const Xbyak::Xmm &vWriteMask,
+                              const bool useMask, const bool zeroFill) {
+}*/
+
+void JitKernelBase::scatterdd(const Xbyak::Reg64 &rDstPtr, const Xbyak::Ymm &vSrc,
+                              const Xbyak::Ymm &vSrcShift, const Xbyak::Opmask& kWriteMask) {
+    if (vSrc.getIdx() == vSrcShift.getIdx()) {
+        IE_THROW() << "Any pair of the index, mask, or source registers cannot be the same.";
+    }
+//    if (isValidIsa(x64::avx2)) {
+//            uni_vpxor(vSrc, vSrc, vSrc);
+//    if (!useMask)
+    kxnord(kWriteMask, kWriteMask, kWriteMask);
+        vpscatterdd(ptr[rDstPtr + vSrcShift] | kWriteMask, vSrc);
+//    } else {
+//        Xbyak::Xmm xmmDst      = Xbyak::Xmm(vDst.getIdx()),
+//            xmmSrcShft  = Xbyak::Xmm(vSrcShift.getIdx()),
+//            xmmReadMask = Xbyak::Xmm(vReadMask.getIdx());
+//        for (uint8_t i = 0; i < 2; i++) {
+//            gatherdd(xmmDst, rSrcPtr, xmmSrcShft, xmmReadMask, useMask, zeroFill);
+//
+//            vperm2f128(vDst, vDst, vDst, 0x1);
+//            vperm2f128(vSrcShift, vSrcShift, vSrcShift, 0x1);
+//            if (useMask)
+//                vperm2f128(vReadMask, vReadMask, vReadMask, 0x1);
+//        }
+//    }
+}
