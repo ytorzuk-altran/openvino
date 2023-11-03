@@ -234,3 +234,28 @@ TEST(shape_of_gpu, shape_infer_optimization_dynamic) {
         }
     }
 }
+
+TEST(shape_of_gpu_static_shape_windows_issue, bfyx) {
+    auto& engine = get_test_engine();
+
+    auto input = engine.allocate_memory({data_types::f32, format::bfyx, tensor{1, 2, 3, 3}});
+
+    topology topology;
+    topology.add(input_layout("input", input->get_layout()));
+    topology.add(shape_of("shape_of", input_info("input"), data_types::i32));
+
+    network network(engine, topology, get_test_default_config(engine));
+
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+
+    auto output = outputs.at("shape_of").get_memory();
+    cldnn::mem_lock<int32_t> output_ptr(output, get_test_stream());
+
+    std::vector<int32_t> expected_results = {1, 2, 3, 3};
+
+    for (size_t i = 0; i < expected_results.size(); ++i) {
+        ASSERT_TRUE(are_equal(expected_results[i], output_ptr[i]));
+    }
+}
