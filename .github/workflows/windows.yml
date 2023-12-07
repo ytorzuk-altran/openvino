@@ -73,7 +73,7 @@ jobs:
       # Dependencies
       #
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -221,7 +221,7 @@ jobs:
             Expand-Archive openvino_tests.zip -DestinationPath "${{ env.INSTALL_DIR }}"
           popd
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -297,7 +297,7 @@ jobs:
         with:
           path: 'openvino'
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -686,7 +686,7 @@ jobs:
             Expand-Archive openvino_tests.zip -DestinationPath "${{ env.INSTALL_DIR }}"
           popd
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 

@@ -100,7 +100,7 @@ jobs:
         with:
           version: "v0.5.4"
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -328,10 +328,10 @@ jobs:
       - name: Install OpenVINO dependencies
         run: bash ${INSTALL_TEST_DIR}/scripts/install_dependencies/install_openvino_dependencies.sh -c=core -c=gpu -y
 
-      - name: Install 'actions/setup-python@v4' dependencies
+      - name: Install 'actions/setup-python@v5' dependencies
         run: apt-get install -y libssl3
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
