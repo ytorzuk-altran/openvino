@@ -62,13 +62,13 @@ jobs:
           apt-get install --assume-yes --no-install-recommends git ca-certificates git-lfs
 
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: ${{ env.OPENVINO_REPO }}
           submodules: 'true'
 
       - name: Clone test models
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: 'openvinotoolkit/testdata'
           path: ${{ env.MODELS_PATH }}
@@ -232,13 +232,13 @@ jobs:
         run: apt-get update && apt-get install --assume-yes --no-install-recommends git ca-certificates git-lfs
 
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: ${{ env.OPENVINO_REPO }}
           submodules: 'true'
 
       - name: Clone test models
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: 'openvinotoolkit/testdata'
           path: ${{ env.MODELS_PATH }}

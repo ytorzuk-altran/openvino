@@ -63,13 +63,13 @@ jobs:
       BUILD_DIR: ${{ github.workspace }}/build
     steps:
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: 'openvino'
           submodules: 'true'
 
       - name: Clone OpenVINO Contrib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: 'openvinotoolkit/openvino_contrib'
           path: 'openvino_contrib'
@@ -542,7 +542,7 @@ jobs:
       LAYER_TESTS_INSTALL_DIR: ${{ github.workspace }}/install/tests/layer_tests
     steps:
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: 'openvino'
           submodules: 'true'

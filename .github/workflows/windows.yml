@@ -50,13 +50,13 @@ jobs:
       BUILD_DIR: "${{ github.workspace }}\\openvino_build"
     steps:
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: 'openvino'
           submodules: 'true'
 
       - name: Clone OpenVINO Contrib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: 'openvinotoolkit/openvino_contrib'
           path: 'openvino_contrib'
@@ -293,7 +293,7 @@ jobs:
           popd
 
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: 'openvino'
 
