@@ -62,7 +62,7 @@ jobs:
           key: sphinx-docs-cache
 
       - name: Get number of CPU cores
-        uses: SimenB/github-actions-cpu-cores@v2
+        uses: SimenB/github-actions-cpu-cores@v3
         id: cpu-cores
 
       - name: Build docs
