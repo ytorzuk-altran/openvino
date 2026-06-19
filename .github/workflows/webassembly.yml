@@ -49,7 +49,7 @@ jobs:
         run: apt-get update && apt-get install --assume-yes --no-install-recommends git ca-certificates
 
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: 'openvino'
           submodules: 'true'

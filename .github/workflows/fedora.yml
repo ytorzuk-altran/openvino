@@ -54,7 +54,7 @@ jobs:
         run: yum update -y && yum install -y git
 
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ${{ env.OPENVINO_REPO }}
           submodules: 'true'

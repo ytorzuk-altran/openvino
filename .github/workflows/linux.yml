@@ -68,13 +68,13 @@ jobs:
           apt-get install --assume-yes --no-install-recommends git ca-certificates
 
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ${{ env.OPENVINO_REPO }}
           submodules: 'true'
 
       - name: Clone OpenVINO Contrib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: 'openvinotoolkit/openvino_contrib'
           path: ${{ env.OPENVINO_CONTRIB_REPO }}
@@ -534,7 +534,7 @@ jobs:
 
     steps:
       - name: Fetch install_build_dependencies.sh
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             install_build_dependencies.sh
@@ -1083,7 +1083,7 @@ jobs:
           TEST_PRECISION: FP16
 
       - name: Clone API snippets
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: openvino/docs/snippets
           path: ${{ env.OPENVINO_REPO }}
@@ -1425,13 +1425,13 @@ jobs:
 
       # TODO: replace with sparse checkout below
       - name: Clone OpenVINO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ${{ env.OPENVINO_REPO }}
 
       - name: Fetch install_build_dependencies.sh
         if: ${{ 'false' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             install_build_dependencies.sh
@@ -1439,7 +1439,7 @@ jobs:
           path: ${{ env.OPENVINO_REPO }}
 
       - name: Clone OpenVINO Contrib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: 'openvinotoolkit/openvino_contrib'
           path: ${{ env.OPENVINO_CONTRIB_REPO }}
